@@ -1233,7 +1233,7 @@ window.__SCHED__ = {
   "total_fact_h": 250,
   "total_percent": 54.3,
   "header": {
-    "title": "Расписание КТИС",
+    "title": "Расписание Морылёва К.С.",
     "verified": true
   }
 }
