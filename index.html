@@ -28,7 +28,7 @@ a{color:var(--accent2);text-decoration:none}
 .top .date{font-size:12px;color:var(--fg2);font-weight:500}
 .center{margin-left:auto;display:flex;align-items:center;gap:8px}
 .icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
-  background:var(--card2);color:var(--fg2);cursor:pointer;font-size:16px;
+  background:var(--card2);color:var(--fg2);cursor:pointer;font-size:14px;
   display:flex;align-items:center;justify-content:center;transition:.15s}
 .icon-btn:hover{background:var(--card);color:var(--fg)}
 .icon-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -140,11 +140,6 @@ table tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 <script src="site_data.js"></script>
 <script>
 let SCHED = window.__SCHED__ || {};
-
-function formatDate(weekday) {
-  const days = {'Пн':'Mon','Вт':'Tue','Ср':'Wed','Чт':'Thu','Пт':'Fri','Сб':'Sat','Вс':'Sun'};
-  return days[weekday] || weekday;
-}
 
 function renderGroupList() {
   const container = document.getElementById('groupList');
