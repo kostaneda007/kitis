@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Расписание Морылёва — неделя</title>
+<script src="site_data.js"></script>
+<style>
+:root{
+  --bg:#0b0d12; --bg2:#11141c; --card:#171b26; --card2:#1d2333; --card3:#232c3e;
+  --fg:#e6e9f0; --fg2:#9aa6b8; --fg3:#6b7688;
+  --accent:#6c5ce7; --accent2:#00d2ff;
+  --warn:#ff8a5c; --ok:#00d68f; --danger:#ff5c7a;
+  --border:#2a3244; --radius:12px; --shadow:0 8px 28px rgba(0,0,0,.4);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--sans);background:var(--bg);color:var(--fg);
+  -webkit-font-smoothing:antialiased;overflow:hidden;position:relative}
+button{font-family:inherit}
+a{color:var(--accent2);text-decoration:none}
+.top{position:fixed;top:0;left:0;right:0;height:60px;z-index:30;
+  display:flex;align-items:center;gap:14px;padding:0 20px;
+  background:rgba(11,13,18,.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);border-radius:0 0 8px 8px;
+  box-shadow:var(--shadow)}
+.logo{font-size:20px;font-weight:800;letter-spacing:.3px;white-space:nowrap}
+.top .date{font-size:12px;color:var(--fg2);font-weight:500}
+.center{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card2);color:var(--fg2);cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:.15s}
+.icon-btn:hover{background:var(--card);color:var(--fg)}
+.icon-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.main{margin-top:60px;display:flex;gap:20px;padding:20px;height:calc(100vh - 60px);overflow:hidden}
+@media (max-width: 1024px){.main{flex-direction:column;height:auto;padding:16px}.top{flex-wrap:wrap}}
+@media (max-width: 600px){
+  .top{padding:0 12px;height:52px}
+  .main{padding:12px;gap:12px}
+  .logo{font-size:16px}
+}
+.current-pair{
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius:12px;padding:20px;box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.current-pair::after{content:"";position:absolute;right:-30px;top:-30px;
+  width:120px;height:120px;border-radius:50%;
+  background:linear-gradient(135deg, transparent 50%, rgba(255,255,255,.15));}
+.current-pair .pair-number{font-size:48px;font-weight:800;color:#fff;line-height:1}
+.current-pair .pair-time{font-size:22px;font-weight:600;color:#fff;margin-top:8px}
+.current-pair .pair-detail{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.current-pair .pair-detail span{font-size:13px;color:rgba(255,255,255,.9)}
+.current-pair .pair-detail .room{font-weight:600;color:#fff}
+.current-pair .countdown{font-size:32px;font-weight:700;color:#00d68f;margin-top:10px}
+.countdown-label{font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1px}
+
+.sched-table{width:100%;border-collapse:collapse;font-size:14px}
+.sched-table th{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg2);padding:8px 6px;text-align:center;border-bottom:1px solid var(--border)}
+.sched-table td{padding:6px 6px;cursor:default;transition:background .15s}
+.sched-table tr:hover td{background:rgba(108,92,231,.08)}
+.sched-table tr.current-pair-row td{background:rgba(108,92,231,.3)!important}
+.sched-table td:nth-child(1), .sched-table td:nth-child(2), .sched-table td:nth-child(4), .sched-table td:nth-child(5), .sched-table td:nth-child(6), .sched-table td:nth-child(7) {border-left:1px solid var(--border)}
+.sched-table td:first-child{font-weight:600}
+.sched-table td.subj{font-weight:500;color:var(--fg)}
+.sched-table td.room{color:var(--fg3);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.sched-table td.teacher{color:var(--fg2);font-size:13px}
+.sched-table tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+
+.groups-sidebar{flex:1;min-width:300px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;padding-right:8px}
+.group-card{background:var(--card);border-radius:12px;padding:16px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.group-card:hover{transform:translateY(-2px);transition:.2s}
+.group-card .badge{display:flex;align-items:center;justify-content:space-between}
+.group-card .badge h3{font-size:16px;font-weight:700;color:var(--fg)}
+.group-card .badge .dot{width:10px;height:10px;border-radius:50%;background:var(--accent2)}
+.group-card .sub{display:flex;gap:10px;margin-top:8px;font-size:12px;color:var(--fg2)}
+.group-card .sub span{flex:1;padding:4px 8px;border-radius:6px;background:var(--card3);border:1px solid var(--border)}
+.group-card .sub span.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.group-card .lesson-list{font-size:12px;color:var(--fg2);margin-top:8px;line-height:1.8}
+.group-card .lesson{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--border)}
+.group-card .lesson:last-child{border-bottom:none}
+.group-card .lesson .time{color:var(--fg2);font-size:11px;white-space:nowrap}
+.group-card .lesson .subj{font-weight:500;color:var(--fg);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.group-card .lesson .teacher{color:var(--fg2);font-size:11px}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+.modal-overlay.active{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:28px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h2{font-size:20px;margin-bottom:12px;color:var(--fg)}
+.modal .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal .detail-item{background:var(--card2);border-radius:8px;padding:12px;color:var(--fg2);font-size:13px}
+.modal .detail-item .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg3);margin-bottom:4px}
+.modal .detail-item .value{font-size:14px;color:var(--fg);font-weight:500}
+.modal .close-btn{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--fg2);font-size:24px;cursor:pointer;width:36px;height:36px;border-radius:50%;transition:.15s}
+.modal .close-btn:hover{color:var(--fg);background:rgba(255,255,255,.1)}
+
+.bell-indicator{position:absolute;top:80px;right:20px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.bell-indicator .bell-icon{width:48px;height:48px;border-radius:50%;background:var(--warn);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:var(--shadow)}
+.bell-indicator .bell-msg{font-size:12px;color:#fff;font-weight:500;text-align:center}
+.bell-indicator .bell-count{font-size:28px;font-weight:700;color:#fff}
+
+@media (max-width: 768px){
+  .main{flex-direction:column;height:auto}
+  .groups-sidebar{flex-direction:row;flex-wrap:wrap}
+  .group-card{flex:1 1 300px;min-width:280px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">📅 Расписание Морылёва</div>
+  <div class="date" id="currentDate"></div>
+  <div class="center">
+    <button id="themeToggle" class="icon-btn" title="Тема">🌙</button>
+    <button id="navToggle" class="icon-btn" title="Навигация">☰</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="current-pair" id="currentPair">
+    <div class="pair-number" id="pairNumber">—</div>
+    <div class="pair-time" id="pairTime">—:— —</div>
+    <div class="pair-detail">
+      <span id="pairRoom">—</span>
+      <span id="pairSubject">—</span>
+      <span id="pairTeacher">—</span>
+    </div>
+    <div class="countdown-label">осталось</div>
+    <div class="countdown" id="countdown">—</div>
+  </div>
+
+  <div class="groups-sidebar" id="groupsSidebar">
+    <div class="group-card" id="groupCard">
+      <div class="badge">
+        <h3>📘 Расписание групп</h3>
+        <div class="dot" id="groupDot"></div>
+      </div>
+      <div class="lesson-list" id="groupList">
+        <!-- Lessons will be injected here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="close-btn" id="modalClose">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<div class="bell-indicator" id="bellIndicator" style="display:none">
+  <div class="bell-icon">🔔</div>
+  <div class="bell-msg" id="bellMsg">Сел пары!</div>
+</div>
+
+<script>
+// Check if we're running locally or on GitHub Pages
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// Group data - order: ВЕБ26-2, ИСр24-1, ИСр25-1
+const groupsData = [
+  {id: 'cg96.htm', num: '46.', name: 'ИСр25-1', rooms: ['104', '111', '301/2', '304', '401/1', '401/2', '402', '403', '404', '409', 'Сп. зал 1'], lessons: []},
+  {id: 'cg95.htm', num: '45.', name: 'ИСр24-1', rooms: ['112', '201', '202', '203', '208м', '301/1', '401/2', '403', '404', '409', 'Сп. зал 3'], lessons: []},
+  {id: 'cg127.htm', num: '50.', name: 'ВЕБ26-2', rooms: ['111', '202', '203', '301/2', '401/2', '403', '404', 'Сп. зал 3'], lessons: []}
+];
+
+function getCurrentPair() {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const currentTime = hours * 60 + minutes;
+  
+  for (const group of groupsData) {
+    for (const lesson of group.lessons) {
+      const start = lesson.time_start.split(':');
+      const end = lesson.time_end.split(':');
+      const startMinutes = parseInt(start[0]) * 60 + parseInt(start[1]);
+      const endMinutes = parseInt(end[0]) * 60 + parseInt(end[1]);
+      if (currentTime >= startMinutes && currentTime <= endMinutes) {
+        return {...lesson, group: group.name, room: lesson.room, subject: lesson.subject, teacher: lesson.teacher};
+      }
+    }
+  }
+  return null;
+}
+
+function updateCurrentPair() {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const label = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`;
+  
+  const pair = getCurrentPair();
+  
+  if (pair) {
+    document.getElementById('pairNumber').textContent = pair.lesson;
+    document.getElementById('pairTime').textContent = pair.time_start + '–' + pair.time_end;
+    document.getElementById('pairRoom').textContent = 'Аудитория: ' + pair.room;
+    document.getElementById('pairSubject').textContent = 'Предмет: ' + pair.subject;
+    document.getElementById('pairTeacher').textContent = 'Преподаватель: ' + pair.teacher;
+    
+    const nowMinutes = hours * 60 + minutes;
+    const startMinutes = parseInt(pair.time_start.split(':')[0]) * 60 + parseInt(pair.time_start.split(':')[1]);
+    const endMinutes = parseInt(pair.time_end.split(':')[0]) * 60 + parseInt(pair.time_end.split(':')[1]);
+    const remaining = Math.max(0, endMinutes - nowMinutes);
+    
+    if (remaining < 60) {
+      document.getElementById('countdown').textContent = remaining + ' м';
+      document.getElementById('countdown').style.color = '#ff8a5c';
+    } else {
+      const hours = Math.floor(remaining / 60);
+      const mins = remaining % 60;
+      document.getElementById('countdown').textContent = hours + ' ч ' + mins + ' м';
+      document.getElementById('countdown').style.color = '#00d68f';
+    }
+  } else {
+    document.getElementById('pairNumber').textContent = '—';
+    document.getElementById('pairTime').textContent = '—:— —';
+    document.getElementById('pairRoom').textContent = '—';
+    document.getElementById('pairSubject').textContent = '—';
+    document.getElementById('pairTeacher').textContent = '—';
+    document.getElementById('countdown').textContent = '—';
+    document.getElementById('countdown').style.color = '#6b7688';
+  }
+}
+
+function updateDate() {
+  const now = new Date();
+  const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+  const day = now.getDate();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  document.getElementById('currentDate').textContent = `${days[now.getDay()]} ${day} ${months[month]} ${year}`;
+}
+
+function showModal(lesson) {
+  const data = { Пн: 'Понедельник', Вт: 'Вторник', Ср: 'Среда', Чт: 'Четверг', Пт: 'Пятница', Сб: 'Суббота', Вс: 'Воскресенье' };
+  document.getElementById('modalContent').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-item"><div class="label">Дата</div><div class="value">${lesson.date} (${data[lesson.weekday] || lesson.weekday})</div></div>
+      <div class="detail-item"><div class="label">Пара</div><div class="value">${lesson.lesson}</div></div>
+      <div class="detail-item"><div class="label">Время</div><div class="value">${lesson.time_start} – ${lesson.time_end}</div></div>
+      <div class="detail-item"><div class="label">Предмет</div><div class="value">${lesson.subject}</div></div>
+      <div class="detail-item"><div class="label">Группа</div><div class="value">${lesson.group}</div></div>
+      <div class="detail-item"><div class="label">Аудитория</div><div class="value">${lesson.room}</div></div>
+      <div class="detail-item"><div class="label">Преподаватель</div><div class="value">${lesson.teacher}</div></div>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+
+function renderGroup(group) {
+  const list = document.getElementById('groupList');
+  list.innerHTML = '';
+  if (group.lessons && group.lessons.length > 0) {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const todayLessons = group.lessons.filter(l => l.date === todayStr);
+    const futureLessons = group.lessons.filter(l => l.date > todayStr);
+    const allLessons = [...todayLessons, ...futureLessons];
+    allLessons.forEach(lesson => {
+      const li = document.createElement('div');
+      li.className = 'lesson';
+      li.innerHTML = `
+        <div class="subj">${lesson.subject}</div>
+        <div class="time">${lesson.time_start} – ${lesson.time_end} <span>${lesson.room}</span></div>
+      `;
+      li.addEventListener('click', () => showModal(lesson));
+      list.appendChild(li);
+    });
+  } else {
+    list.innerHTML = '<div style="color:var(--fg2);font-size:12px">Расписание на эту неделю пусто</div>';
+  }
+}
+
+function init() {
+  updateDate();
+  setInterval(updateCurrentPair, 30000);
+  updateCurrentPair();
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  
+  // Render groups from site_data.js (loaded via <script src="site_data.js">)
+  if (window.__SCHED__ && window.__SCHED__.groups) {
+    const group = window.__SCHED__.groups.find(g => ['cg96.htm', 'cg95.htm', 'cg127.htm'].includes(g.id));
+    if (group) {
+      // Find the lesson list container
+      const list = document.getElementById('groupList');
+      if (list) {
+        list.innerHTML = '';
+        group.lessons.forEach(lesson => {
+          const div = document.createElement('div');
+          div.className = 'lesson';
+          div.innerHTML = `
+            <div class="subj">${lesson.subject}</div>
+            <div class="time">${lesson.time_start} – ${lesson.time_end} <span>${lesson.room}</span></div>
+          `;
+          div.addEventListener('click', () => showModal(lesson));
+          list.appendChild(div);
+        });
+      }
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

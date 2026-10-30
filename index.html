@@ -280,29 +280,34 @@ function renderGroup(group) {
 
 function init() {
   updateDate();
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (true) {
-    fetch('/schedule.json')
-      .then(r => r.json())
-      .then(data => {
-        SCHED = data;
-        renderGroup(groupsData[0]);
-      })
-      .catch(() => {
-        groupsData[0].lessons = [
-          {date: '26.10.2026', weekday: 'Пн', lesson: 1, time_start: '08:30', time_end: '09:00', group: 'Разговоры о важном', room: '203', subject: 'Шевченко П.С.'},
-          {date: '26.10.2026', weekday: 'Пн', lesson: 2, time_start: '09:10', time_end: '10:30', group: 'Физическая культура', room: 'Сп. зал 3', subject: 'Чертищев В.А.'},
-          {date: '26.10.2026', weekday: 'Пн', lesson: 3, time_start: '10:40', time_end: '12:00', group: 'Графический дизайн и мультимедиа', room: '403', subject: 'Морылёв К.С.'}
-        ];
-        renderGroup(groupsData[0]);
-      });
-  }
   setInterval(updateCurrentPair, 30000);
   updateCurrentPair();
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('modalOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeModal();
   });
+  
+  // Render groups from site_data.js (loaded via <script src="site_data.js">)
+  if (window.__SCHED__ && window.__SCHED__.groups) {
+    const group = window.__SCHED__.groups.find(g => ['cg96.htm', 'cg95.htm', 'cg127.htm'].includes(g.id));
+    if (group) {
+      // Find the lesson list container
+      const list = document.getElementById('groupList');
+      if (list) {
+        list.innerHTML = '';
+        group.lessons.forEach(lesson => {
+          const div = document.createElement('div');
+          div.className = 'lesson';
+          div.innerHTML = `
+            <div class="subj">${lesson.subject}</div>
+            <div class="time">${lesson.time_start} – ${lesson.time_end} <span>${lesson.room}</span></div>
+          `;
+          div.addEventListener('click', () => showModal(lesson));
+          list.appendChild(div);
+        });
+      }
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
