@@ -281,7 +281,7 @@ function renderGroup(group) {
 function init() {
   updateDate();
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isLocal) {
+  if (true) {
     fetch('/schedule.json')
       .then(r => r.json())
       .then(data => {
