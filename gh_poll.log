@@ -1,0 +1,4 @@
+device_code=3842f9efceaa223cb79ba3acf42725405c15c0af interval=5
+POLLER STARTED
+gh_poll.sh: line 38: unexpected EOF while looking for matching `"'
+gh_poll.sh: line 40: syntax error: unexpected end of file
