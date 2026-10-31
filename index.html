@@ -52,7 +52,18 @@
   --sans:'Roboto','Rubik','Segoe UI',system-ui,-apple-system,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{overflow-x:hidden;background:var(--md-surface)}
+html{overflow-x:hidden;background:var(--md-surface);scrollbar-color:var(--md-surface-highest) var(--md-surface-low)}
+
+/* --- скроллбары в стиле MD3 (графит + оранжевый) --- */
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:var(--md-surface-low);border-radius:8px}
+*::-webkit-scrollbar-thumb{background:var(--md-surface-highest);border-radius:8px;
+  border:2px solid var(--md-surface-low)}
+*::-webkit-scrollbar-thumb:hover{background:var(--md-outline)}
+*::-webkit-scrollbar-thumb:active{background:var(--md-primary)}
+*::-webkit-scrollbar-corner{background:var(--md-surface-low)}
+.list::-webkit-scrollbar{width:8px}
+.list::-webkit-scrollbar-thumb{border-width:1px}
 body{font-family:var(--sans);background:var(--md-surface);color:var(--md-on-surface);
   -webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden;
   font-variant-numeric:tabular-nums}
@@ -248,11 +259,11 @@ a{color:var(--md-primary);text-decoration:none}
 
 /* ---------- Bells ---------- */
 .bells-day .bellrow{display:flex;gap:12px;padding:16px 24px 24px;flex-wrap:wrap}
-.bell{flex:1 1 0;min-width:0;background:var(--md-surface-high);border-radius:var(--shape-md);
+.bell{flex:1 1 0;min-width:92px;background:var(--md-surface-high);border-radius:var(--shape-md);
   padding:14px 8px;text-align:center;transition:background var(--dur-short)}
 .bell .bn{display:block;font-size:20px;font-weight:400;color:var(--md-on-surface)}
 .bell .bt{display:block;font-size:11px;color:var(--md-on-surface-variant);margin-top:3px;
-  white-space:nowrap;letter-spacing:-.2px;overflow:hidden;text-overflow:ellipsis}
+  white-space:nowrap;letter-spacing:-.2px}
 .bell.next{background:var(--md-surface-highest);outline:1px solid var(--st-warn)}
 .bell.next .bn{color:var(--st-warn)}
 .bell.now{background:var(--st-ok);color:var(--st-on-ok)}
@@ -346,6 +357,7 @@ footer{max-width:1600px;margin:0 auto;padding:32px 24px;text-align:center;
   .bells-day .bellrow{display:grid;grid-template-columns:repeat(4,1fr)}
   .bells-day .bellrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 16px 16px}
   .bell{padding:12px 4px;min-width:0}
+  .bells-day .bellrow{grid-template-columns:repeat(3,1fr)}
   .bell .bn{font-size:18px}
   .bell .bt{font-size:10px;letter-spacing:-.4px}
   .loadsum{grid-template-columns:repeat(2,1fr);gap:10px}
