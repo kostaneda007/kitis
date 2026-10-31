@@ -127,15 +127,18 @@ header.top{position:sticky;top:0;z-index:40;background:rgba(11,13,18,.94);
 .tl-meta .mt{font-size:11px;color:var(--fg2);background:var(--card2);border:1px solid var(--border);
   border-radius:5px;padding:2px 7px}
 .tl-meta .mt i{color:var(--fg3);font-style:normal;margin-right:5px}
-.tl-item.now{background:linear-gradient(90deg,rgba(0,210,255,.09),transparent 70%);
+.tl-item.now{background:linear-gradient(90deg,rgba(0,210,255,.05),transparent 65%);
   border-radius:9px;margin:0 -8px;padding-left:8px;padding-right:8px}
-.tl-item.now .tl-node{background:var(--accent2);border-color:var(--accent2);color:#06232c;
-  box-shadow:0 0 0 4px rgba(0,210,255,.18)}
+.tl-item.now .tl-node{border-color:rgba(0,210,255,.5);color:var(--accent2)}
 .tl-item.now .tl-time{color:var(--accent2)}
-.tl-item.now .tl-title{color:#fff}
-.tl-item.now::before{content:"сейчас";position:absolute;right:0;top:9px;font-size:9px;
+.tl-item.now-today{background:linear-gradient(90deg,rgba(0,210,255,.11),transparent 72%);
+  box-shadow:inset 2px 0 0 var(--accent2)}
+.tl-item.now-today .tl-node{background:var(--accent2);border-color:var(--accent2);color:#06232c;
+  box-shadow:0 0 0 4px rgba(0,210,255,.18)}
+.tl-item.now-today .tl-title{color:#fff}
+.tl-item.now-today::before{content:"сейчас";position:absolute;right:0;top:9px;font-size:9px;
   font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);
-  background:rgba(0,210,255,.12);border-radius:20px;padding:2px 8px}
+  background:rgba(0,210,255,.14);border-radius:20px;padding:2px 8px}
 
 /* --- звонки --- */
 .bells-day .bellrow{display:flex;gap:6px;padding:14px 16px 18px}
@@ -325,7 +328,9 @@ function paint(){
     var dow = DOW[el.getAttribute('data-wday')];
     var n = +el.getAttribute('data-n');
     var w = (dow === undefined) ? null : pairWindow(dow, n);
-    el.classList.toggle('now', !!w && now.mins >= w[0] && now.mins < w[1]);
+    var isNow = !!w && now.mins >= w[0] && now.mins < w[1];
+    el.classList.toggle('now', isNow);
+    el.classList.toggle('now-today', isNow && dow === todayIdx);
   });
 
   // заголовок дня: помечаем сегодняшний день недели
