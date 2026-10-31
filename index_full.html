@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Расписание КИТИС — неделя</title>
+<style>
+:root{
+  --bg:#0b0d12; --bg2:#11141c; --card:#171b26; --card2:#1d2333; --card3:#232c3e;
+  --fg:#e6e9f0; --fg2:#9aa6b8; --fg3:#6b7688;
+  --accent:#6c5ce7; --accent2:#00d2ff;
+  --border:#2a3244; --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6}
+.top{position:sticky;top:0;z-index:30;background:rgba(11,13,18,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:12px 0}
+.logo{font-size:24px;font-weight:800;letter-spacing:.3px}
+.top .date{font-size:13px;color:var(--fg2)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px}
+.stat{background:var(--card);border-radius:10px;padding:14px;text-align:center}
+.stat .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg3)}
+.stat .value{font-size:28px;font-weight:700;color:var(--fg)}
+.stat.plan .value{color:var(--accent2)}
+.stat.fact .value{color:#ff8a5c}
+h1{font-size:28px;font-weight:800;margin:20px 0 10px}
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0}
+.group-card{background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border)}
+.group-card h2{font-size:20px;margin-bottom:12px}
+.lesson-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.lesson{background:var(--card2);border-radius:10px;padding:12px;border-left:3px solid var(--accent);cursor:pointer;transition:.15s}
+.lesson:hover{background:var(--card3);border-left-color:var(--accent2)}
+.lesson .time{font-size:11px;color:var(--fg3);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.lesson .subject{font-size:16px;font-weight:600;color:var(--fg)}
+.lesson .teacher{font-size:13px;color:var(--fg2);margin-top:4px}
+.lesson .room{font-size:12px;color:var(--fg3);margin-top:4px;font-weight:500}
+.load-results{margin:20px 0}
+.load-results h3{font-size:20px;margin-bottom:12px}
+.load-table{width:100%;border-collapse:collapse;font-size:14px}
+.load-table th{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--fg2);padding:8px;text-align:left;border-bottom:1px solid var(--border)}
+.load-table td{padding:10px;border-bottom:1px solid var(--border)}
+.load-table .plan{color:var(--accent2);font-weight:600}
+.load-table .fact{color:#ff8a5c;font-weight:600}
+.load-table .percent{color:var(--ok);font-weight:700}
+.bells{margin:20px 0;padding:20px;background:var(--card);border-radius:12px;border:1px solid var(--border)}
+.bells h3{font-size:20px;margin-bottom:12px}
+.bell-row{display:grid;grid-template-columns:150px 1fr 1fr 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center}
+.bell-row:last-child{border-bottom:none}
+.bell-row .time{font-size:12px;color:var(--fg2);font-weight:500}
+.bell-row .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg3)}
+.bell-row .start{font-size:14px;font-weight:600;color:var(--fg)}
+.bell-row .end{font-size:14px;font-weight:600;color:var(--fg2)}
+.bell-row .badge{font-size:11px;background:var(--accent);color:#fff;border-radius:20px;padding:2px 8px;text-align:center}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.active{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h2{font-size:20px;margin-bottom:12px}
+.modal .detail{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.modal .detail-item{background:var(--card2);border-radius:8px;padding:12px}
+.modal .detail-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg3);margin-bottom:4px}
+.modal .detail-value{font-size:14px;color:var(--fg);font-weight:500}
+.modal .close-btn{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--fg2);font-size:24px;cursor:pointer}
+.modal .close-btn:hover{color:var(--fg);background:rgba(255,255,255,.1)}
+.footer{margin-top:40px;text-align:center;color:var(--fg2);font-size:12px}
+@media (max-width:700px){.bell-row{grid-template-columns:1fr} .modal .detail{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">Расписание КИТИС</div>
+  <div class="date" id="currentDate"></div>
+</div>
+
+<div class="stats">
+  <div class="stat plan"><div class="label">План</div><div class="value">230</div></div>
+  <div class="stat fact"><div class="label">Факт</div><div class="value">250</div></div>
+  <div class="stat"><div class="label">Выполнение</div><div class="value">54.3%</div></div>
+</div>
+
+<h1>Группы и Расписание</h1>
+<div class="groups">
+
+<div class="group-card">
+<h2>50. ВЕБ26-2</h2>
+<div class="lesson-grid">
+<div class="lesson">
+<div class="time">1. пара 08:30-09:00</div>
+<div class="subject">Шевченко П.С.</div>
+<div class="teacher">Шевченко П.С.</div>
+<div class="room">&#127911; 203</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 09:10-10:30</div>
+<div class="subject">Андрийченко В.А.</div>
+<div class="teacher">Андрийченко В.А.</div>
+<div class="room">&#127911; 202</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 10:40-12:00</div>
+<div class="subject">Баденкова Ю.А.</div>
+<div class="teacher">Баденкова Ю.А.</div>
+<div class="room">&#127911; 111</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 12:20-13:40</div>
+<div class="subject">Молите Д.А.</div>
+<div class="teacher">Молите Д.А.</div>
+<div class="room">&#127911; 401/2</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Шевченко П.С.</div>
+<div class="teacher">Шевченко П.С.</div>
+<div class="room">&#127911; 203</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Шевченко П.С.</div>
+<div class="teacher">Шевченко П.С.</div>
+<div class="room">&#127911; 203</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Дрёмов А.В.</div>
+<div class="teacher">Дрёмов А.В.</div>
+<div class="room">&#127911; 301/2</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Чертищев В.А.</div>
+<div class="teacher">Чертищев В.А.</div>
+<div class="room">&#127911; Сп. зал 3</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Дрёмов А.В.</div>
+<div class="teacher">Дрёмов А.В.</div>
+<div class="room">&#127911; 301/2</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Богачёв В.И.</div>
+<div class="teacher">Богачёв В.И.</div>
+<div class="room">&#127911; 404</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 15:30-17:00</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 15:30-17:00</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">6. пара 17:10-18:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+</div>
+</div>
+<div class="group-card">
+<h2>45. ИСр24-1</h2>
+<div class="lesson-grid">
+<div class="lesson">
+<div class="time">1. пара 08:30-09:00</div>
+<div class="subject">Шевченко П.С.</div>
+<div class="teacher">Шевченко П.С.</div>
+<div class="room">&#127911; 203</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 09:10-10:30</div>
+<div class="subject">Чертищев В.А.</div>
+<div class="teacher">Чертищев В.А.</div>
+<div class="room">&#127911; Сп. зал 3</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 10:40-12:00</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 12:20-13:40</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 409</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 13:50-15:10</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 401/2</div>
+</div>
+<div class="lesson">
+<div class="time">6. пара 15:30-17:00</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 401/2</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Котельников А.М.</div>
+<div class="teacher">Котельников А.М.</div>
+<div class="room">&#127911; 201</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Котельников А.М.</div>
+<div class="teacher">Котельников А.М.</div>
+<div class="room">&#127911; 201</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Молите Д.А.</div>
+<div class="teacher">Молите Д.А.</div>
+<div class="room">&#127911; 401/2</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Брускина Н.И.</div>
+<div class="teacher">Брускина Н.И.</div>
+<div class="room">&#127911; 208м</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 404</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 404</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Храмов С.С.</div>
+<div class="teacher">Храмов С.С.</div>
+<div class="room">&#127911; 301/1</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Краснощекова В.В.</div>
+<div class="teacher">Краснощекова В.В.</div>
+<div class="room">&#127911; 112</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 15:30-17:00</div>
+<div class="subject">Андрийченко В.А.</div>
+<div class="teacher">Андрийченко В.А.</div>
+<div class="room">&#127911; 202</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 15:30-17:00</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">6. пара 17:10-18:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+</div>
+</div>
+<div class="group-card">
+<h2>46. ИСр25-1</h2>
+<div class="lesson-grid">
+<div class="lesson">
+<div class="time">1. пара 08:30-09:00</div>
+<div class="subject">Гришина С.В.</div>
+<div class="teacher">Гришина С.В.</div>
+<div class="room">&#127911; 104</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 09:10-10:30</div>
+<div class="subject">Анчиков А.И.</div>
+<div class="teacher">Анчиков А.И.</div>
+<div class="room">&#127911; Сп. зал 1</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 10:40-12:00</div>
+<div class="subject">Молите Д.А.</div>
+<div class="teacher">Молите Д.А.</div>
+<div class="room">&#127911; 401/2</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 12:20-13:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 13:50-15:10</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 404</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 404</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Морылёв К.С.</div>
+<div class="teacher">Морылёв К.С.</div>
+<div class="room">&#127911; 403</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Молите Д.А.</div>
+<div class="teacher">Молите Д.А.</div>
+<div class="room">&#127911; 401/2</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Минбулатова И.Г.</div>
+<div class="teacher">Минбулатова И.Г.</div>
+<div class="room">&#127911; 304</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Максимова Н.А.</div>
+<div class="teacher">Максимова Н.А.</div>
+<div class="room">&#127911; 402</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 404</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 15:30-17:00</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 404</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Баденкова Ю.А.</div>
+<div class="teacher">Баденкова Ю.А.</div>
+<div class="room">&#127911; 111</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Максимова Н.А.</div>
+<div class="teacher">Максимова Н.А.</div>
+<div class="room">&#127911; 402</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 301/2</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 401/1</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 15:30-17:00</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 401/1</div>
+</div>
+<div class="lesson">
+<div class="time">1. пара 08:30-10:00</div>
+<div class="subject">Дрёмов А.В.</div>
+<div class="teacher">Дрёмов А.В.</div>
+<div class="room">&#127911; 301/2</div>
+</div>
+<div class="lesson">
+<div class="time">2. пара 10:10-11:40</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 409</div>
+</div>
+<div class="lesson">
+<div class="time">3. пара 12:10-13:40</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 409</div>
+</div>
+<div class="lesson">
+<div class="time">4. пара 13:50-15:20</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 409</div>
+</div>
+<div class="lesson">
+<div class="time">5. пара 15:30-17:00</div>
+<div class="subject">Громов Р.И.</div>
+<div class="teacher">Громов Р.И.</div>
+<div class="room">&#127911; 409</div>
+</div>
+</div>
+</div>
+</div>
+<div class="load-results">
+<h3>Итоги нагрузки</h3>
+<table class="load-table">
+<tr><th>Группа</th><th>Предмет</th><th>Тип</th><th>План (ч)</th><th>Факт (ч)</th><th>%</th></tr>
+<tr>
+<td>ВЕБ26-2</td>
+<td>Проектирование информационных ресурсов</td>
+<td>Лекция</td>
+<td class="plan">16</td>
+<td class="fact">30</td>
+<td class="percent">100%</td>
+</tr>
+<tr>
+<td>ВЕБ26-2</td>
+<td>Разработка интерфейсов пользователя</td>
+<td>Лекция</td>
+<td class="plan">18</td>
+<td class="fact">22</td>
+<td class="percent">65%</td>
+</tr>
+<tr>
+<td>ВЕБ26-2</td>
+<td>Учебная практика</td>
+<td>Практика</td>
+<td class="plan">57</td>
+<td class="fact">24</td>
+<td class="percent">11%</td>
+</tr>
+<tr>
+<td>ИСр24-1</td>
+<td>Графический дизайн и мультимедиа</td>
+<td>Лекция</td>
+<td class="plan">27</td>
+<td class="fact">22</td>
+<td class="percent">42%</td>
+</tr>
+<tr>
+<td>ИСр24-1</td>
+<td>Учебная практика 08</td>
+<td>Практика</td>
+<td class="plan">76</td>
+<td class="fact">126</td>
+<td class="percent">79%</td>
+</tr>
+<tr>
+<td>ИСр25-1</td>
+<td>Графический дизайн и мультимедиа</td>
+<td>Лекция</td>
+<td class="plan">25</td>
+<td class="fact">18</td>
+<td class="percent">38%</td>
+</tr>
+<tr>
+<td>ИСр25-1</td>
+<td>Проектирование и разработка интерфейсов</td>
+<td>Лекция</td>
+<td class="plan">23</td>
+<td class="fact">32</td>
+<td class="percent">73%</td>
+</tr>
+</table>
+</div>
+<div class="bells">
+<h3>Расписание звонков</h3>
+<h4 style="margin-bottom:8px">Понедельник</h4>
+<div class="bell-row"><div class="label">Время</div><div class="label">С</div><div class="label">По</div><div class="label">Количество</div>
+<div class="time">08:30</div>
+<div class="time">09:00</div>
+<div class="time">09:40</div>
+<div class="time">10:20</div>
+<div class="time">11:00</div>
+<div class="time">11:40</div>
+<div class="time">12:20</div>
+</div>
+<div class="bell-row"><div class="label">Пары</div>
+<div class="time">08:30-09:00</div>
+<div class="time">09:00-09:40</div>
+<div class="time">09:40-10:20</div>
+<div class="time">10:20-11:00</div>
+<div class="time">11:00-11:40</div>
+<div class="time">11:40-12:20</div>
+<div class="time">12:20-13:00</div>
+</div>
+<div class="bell-row"><div class="label">Количество</div>
+<div class="time">7</div>
+<div class="time">7</div>
+<div class="time">7</div>
+<div class="time">7</div>
+<div class="time">7</div>
+<div class="time">7</div>
+<div class="time">7</div>
+</div>
+<h4 style="margin-bottom:8px">Основные дни</h4>
+<div class="bell-row"><div class="label">Время</div><div class="label">С</div><div class="label">По</div><div class="label">Количество</div>
+<div class="time">08:30</div>
+<div class="time">10:00</div>
+<div class="time">11:30</div>
+<div class="time">13:00</div>
+<div class="time">14:30</div>
+<div class="time">16:00</div>
+</div>
+<div class="bell-row"><div class="label">Пары</div>
+<div class="time">08:30-10:00</div>
+<div class="time">10:00-11:30</div>
+<div class="time">11:30-13:00</div>
+<div class="time">13:00-14:30</div>
+<div class="time">14:30-16:00</div>
+<div class="time">16:00-17:30</div>
+</div>
+<div class="bell-row"><div class="label">Количество</div>
+<div class="time">6</div>
+<div class="time">6</div>
+<div class="time">6</div>
+<div class="time">6</div>
+<div class="time">6</div>
+<div class="time">6</div>
+</div>
+<div class="bell-row"><div class="label">Понедельник</div>
+<div class="start">08:30</div>
+<div class="end">13:00</div>
+<div class="badge">7</div></div>
+<div class="bell-row"><div class="label">Основные дни</div>
+<div class="start">08:30</div>
+<div class="end">17:30</div>
+<div class="badge">6</div></div>
+</div>
+<div class="footer">
+Расписание КИТИС — неделя от 30.10.2026<br>
+Источник: Морылёв К.С. / cp142.htm
+</div>
+<div class="modal-overlay" id="modalOverlay">
+<div class="modal">
+<button class="close-btn" onclick="closeModal()">&times;</button>
+<div id="modalContent"></div>
+</div>
+</div>
+<script>
+
+function showDetail(subject, room, group_name, time) {
+    var content = document.getElementById('modalContent');
+    content.innerHTML = '<h2>Детали урока</h2>' +
+        '<div class="detail">' +
+            '<div class="detail-item"><div class="detail-label">Группа</div><div class="detail-value">' + group_name + '</div></div>' +
+            '<div class="detail-item"><div class="detail-label">Время</div><div class="detail-value">' + time + '</div></div>' +
+            '<div class="detail-item"><div class="detail-label">Аудитория</div><div class="detail-value">' + room + '</div></div>' +
+            '<div class="detail-item"><div class="detail-label">Преподаватель</div><div class="detail-value">' + subject + '</div></div>' +
+        '</div>' +
+        '<button onclick="closeModal()" style="margin-top:10px;padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer">Закрыть</button>';
+    document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+const days = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+const months = ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
+const now = new Date();
+document.getElementById('currentDate').textContent = days[now.getDay()] + ' ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+</script>
+</body>
+</html>
