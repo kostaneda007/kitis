@@ -93,6 +93,7 @@ header.top{position:sticky;top:0;z-index:40;background:rgba(11,13,18,.94);
 .track .seg{flex:1 1 0;position:relative;display:flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:700;color:var(--fg3);background:var(--card2);border-left:1px solid var(--bg)}
 .track .seg.now{background:linear-gradient(180deg,var(--accent2),#00a8cc);color:#06232c}
+.track .seg.next{background:var(--card3);color:var(--accent2);box-shadow:inset 0 0 0 1px rgba(0,210,255,.45)}
 .track .seg.done{background:var(--card3);color:var(--fg3)}
 
 /* --- таймлайн --- */
@@ -146,6 +147,8 @@ header.top{position:sticky;top:0;z-index:40;background:rgba(11,13,18,.94);
   padding:8px 6px;text-align:center;transition:.15s}
 .bell .bn{display:block;font-size:17px;font-weight:800;color:var(--fg2)}
 .bell .bt{display:block;font-size:10px;color:var(--fg3);margin-top:2px;white-space:nowrap}
+.bell.next{border-color:rgba(0,210,255,.5);background:rgba(0,210,255,.08)}
+.bell.next .bn{color:var(--accent2)}
 .bell.now{background:linear-gradient(180deg,var(--accent2),#00a8cc);border-color:var(--accent2)}
 .bell.now .bn{color:#06232c}
 .bell.now .bt{color:#0a3a47}
@@ -301,15 +304,24 @@ function pairWindow(dow, n){
 function currentBell(now){
   var mon = (now.wday === 1);
   var arr = mon ? BELLS['Понедельник'] : BELLS['Вт-Сб'];
-  for (var i=0;i<arr.length;i++){
-    var s = toMin(arr[i][0]), e = toMin(arr[i][1]);
+  var i, s, e;
+  for (i=0;i<arr.length;i++){
+    s = toMin(arr[i][0]); e = toMin(arr[i][1]);
     if (now.mins >= s && now.mins < e) {
-      return {n:i+1, start:arr[i][0], end:arr[i][1], left:e-now.mins, mon:mon};
+      return {n:i+1, start:arr[i][0], end:arr[i][1], left:e-now.mins, mon:mon,
+              state:'now', next:null};
+    }
+    if (now.mins < s) {
+      // перерыв: сейчас идёт ничего, следующая пара — arr[i]
+      var prevEnd = (i > 0) ? toMin(arr[i-1][1]) : null;
+      return {n:null, start:arr[i][0], end:arr[i][1], left:s-now.mins, mon:mon,
+              state:'break', next:{n:i+1, start:arr[i][0], end:arr[i][1]},
+              since: prevEnd};
     }
   }
+  // после последней пары
   var last = arr[arr.length-1];
-  if (now.mins >= toMin(last[1])) return {n:arr.length, start:last[0], end:last[1], left:0, mon:mon};
-  return null;
+  return {n:arr.length, start:last[0], end:last[1], left:0, mon:mon, state:'done', next:null};
 }
 
 /* ---------- подсветка ---------- */
@@ -348,19 +360,30 @@ function paint(){
     var isMonRow = (el.getAttribute('data-row') === 'mon');
     var applies = (isMonRow === isMondayToday);
     var n = +el.getAttribute('data-n');
-    el.classList.toggle('now', applies && !!bell && n === bell.n);
+    el.classList.toggle('now', applies && !!bell && bell.state === 'now' && n === bell.n);
+    el.classList.toggle('next', applies && !!bell && bell.state === 'break' &&
+                        bell.next && n === bell.next.n);
   });
 
   // блок «Сейчас»
   var pair = $('#livePair'), time = $('#liveTime'), left = $('#liveLeft'), sub = $('#liveSub');
   var track = $('#liveTrack');
   if (bell) {
-    pair.textContent = 'пара ' + bell.n;
-    time.textContent = bell.start + '–' + bell.end;
-    if (bell.left > 0) {
+    if (bell.state === 'now') {
+      pair.textContent = 'пара ' + bell.n;
+      time.textContent = bell.start + '–' + bell.end;
       var h = Math.floor(bell.left/60), m = bell.left%60;
       left.textContent = 'до конца ' + (h ? h+' ч ' : '') + m + ' мин';
-    } else { left.textContent = 'занятия закончились'; }
+    } else if (bell.state === 'break') {
+      pair.textContent = 'перерыв';
+      time.textContent = 'следующая — пара ' + bell.next.n + ' (' + bell.next.start + '–' + bell.next.end + ')';
+      var h2 = Math.floor(bell.left/60), m2 = bell.left%60;
+      left.textContent = 'через ' + (h2 ? h2+' ч ' : '') + m2 + ' мин';
+    } else {
+      pair.textContent = 'занятия закончились';
+      time.textContent = bell.start + '–' + bell.end;
+      left.textContent = '';
+    }
 
     // если выбран объект — показываем его пару
     var info = '';
@@ -383,6 +406,9 @@ function paint(){
         }
       }
     }
+    if (!info && bell.state === 'break') {
+      info = 'Сейчас перерыв. Расписание звонков: ' + (bell.mon ? 'понедельник — 7 пар' : 'основной день — 6 пар');
+    }
     sub.innerHTML = info || (bell.mon
       ? 'Понедельник — кураторский день, 7 пар'
       : 'Основной день — 6 пар');
@@ -392,7 +418,11 @@ function paint(){
     var html = '';
     arr.forEach(function(b, i){
       var s = toMin(b[0]), e = toMin(b[1]);
-      var cls = (now.mins >= s && now.mins < e) ? 'seg now' : (now.mins >= e ? 'seg done' : 'seg');
+      var cls;
+      if (now.mins >= s && now.mins < e) cls = 'seg now';
+      else if (bell.state === 'break' && bell.next && (i+1) === bell.next.n) cls = 'seg next';
+      else if (now.mins >= e) cls = 'seg done';
+      else cls = 'seg';
       html += '<div class="' + cls + '">' + (i+1) + '</div>';
     });
     track.innerHTML = html;
