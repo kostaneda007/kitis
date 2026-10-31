@@ -211,6 +211,9 @@ footer{max-width:1460px;margin:0 auto;padding:18px;text-align:center;color:var(-
 }
 .close-btn{display:none;background:var(--card2);border:1px solid var(--border);border-radius:8px;
   width:32px;height:32px;color:var(--fg2);font-size:16px;cursor:pointer;margin-left:auto}
+.sidehead{display:none;align-items:center;gap:10px;margin-bottom:4px}
+.sidehead-title{font-size:15px;font-weight:800;color:var(--fg)}
+@media (max-width:1024px){.sidehead{display:flex}}
 @media (max-width:600px){
   .hwrap{padding:9px 12px}
   .brand{font-size:17px}
@@ -255,7 +258,10 @@ footer{max-width:1460px;margin:0 auto;padding:18px;text-align:center;color:var(-
 
 <div class="layout">
   <aside class="sidebar">
-    <button class="close-btn" id="closeBtn">×</button>
+    <div class="sidehead">
+      <span class="sidehead-title" id="drawerLabel">Преподаватели</span>
+      <button class="close-btn" id="closeBtn">×</button>
+    </div>
     <input class="search" id="search" placeholder="Поиск..." autocomplete="off">
     <div class="tcount" id="tcount"></div>
     <div class="tlist" id="tlist"></div>
@@ -511,15 +517,22 @@ function select(target){
 }
 
 function switchTab(kind){
+  var wasTab = TAB;
   TAB = kind;
   $$('.mtab').forEach(function(t){
     t.classList.toggle('active', t.getAttribute('data-tab') === kind);
   });
   renderList(kind);
   select('panel-default');
-  $('#panel-default').hidden = false;
   CUR = 'panel-default';
   paint();
+
+  // В адаптиве: тап по вкладке открывает список (drawer) этой категории.
+  // Повторный тап по той же вкладке — закрывает.
+  if (window.innerWidth <= 1024 && drawer) {
+    if (wasTab === kind && drawer.classList.contains('open')) closeDrawer();
+    else openDrawer();
+  }
 }
 
 /* ---------- drawer (адаптив) ---------- */
@@ -527,6 +540,10 @@ function openDrawer(){
   drawer.classList.add('open');
   scrim.classList.add('show');
   document.body.style.overflow = 'hidden';
+  var lbl = $('#drawerLabel');
+  if (lbl) {
+    lbl.textContent = (TAB === 't') ? 'Преподаватели' : (TAB === 'g') ? 'Группы' : 'Аудитории';
+  }
 }
 function closeDrawer(){
   drawer.classList.remove('open');
@@ -543,6 +560,10 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   drawerBtn.addEventListener('click', function(){
     if (drawer.classList.contains('open')) closeDrawer(); else openDrawer();
+  });
+  // Esc закрывает drawer
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
   scrim.addEventListener('click', closeDrawer);
   $('#closeBtn').addEventListener('click', closeDrawer);
