@@ -214,6 +214,13 @@ a{color:var(--md-primary);text-decoration:none}
 .tl-item.tl-free .tl-node{background:transparent;color:var(--md-on-surface-variant);font-weight:400}
 .tl-item.tl-free .tl-time{color:var(--md-on-surface-variant);font-weight:400}
 .tl-item.tl-free .tl-title.free{color:var(--md-on-surface-variant);font-style:italic}
+/* последняя завершившаяся пара */
+.tl-item.last-pair{border-color:var(--md-outline);background:var(--md-surface-low)}
+.tl-item.last-pair .tl-node{background:var(--md-surface-highest);color:var(--md-on-surface-variant)}
+.tl-item.last-pair .tl-time{color:var(--md-on-surface-variant)}
+.tl-item.last-pair::before{content:"Завершилась";position:absolute;right:14px;top:-9px;font-size:10px;
+  font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--md-on-surface-variant);
+  background:var(--md-surface-highest);border-radius:var(--shape-full);padding:3px 10px;z-index:2}
 /* следующая пара */
 .tl-item.next-pair{border-color:var(--st-warn);background:var(--st-warn-container)}
 .tl-item.next-pair .tl-node{background:var(--st-warn);color:var(--st-on-warn)}
@@ -255,6 +262,8 @@ a{color:var(--md-primary);text-decoration:none}
   border-radius:var(--shape-xs)}
 .track .seg.now{background:var(--st-ok);color:var(--st-on-ok)}
 .track .seg.next{background:rgba(255,184,107,.28);color:var(--st-warn)}
+.track .seg.last{background:var(--md-surface-highest);color:var(--md-primary);
+  box-shadow:inset 0 0 0 1px var(--md-primary)}
 .track .seg.done{background:rgba(255,255,255,.06);color:var(--md-on-surface-variant)}
 
 /* ---------- Bells ---------- */
@@ -447,6 +456,10 @@ var CUR = null;
 var FIRST = true;
 var side = null, scrim = null;
 
+function escJs(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function $(s, r){ return (r||document).querySelector(s); }
 function $$(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
 
@@ -502,7 +515,8 @@ function currentBell(now){
     }
   }
   var last = arr[arr.length-1];
-  return {n:arr.length, start:last[0], end:last[1], left:0, mon:mon, state:'done', next:null};
+  return {n:arr.length, start:last[0], end:last[1], left:0, mon:mon, state:'done',
+          next:null, since:last[0]};
 }
 
 /* ---------- подсветка ---------- */
@@ -514,15 +528,21 @@ function paint(){
 
   var vis = $('.ent:not([hidden])');
   var items = vis ? $$('.tl-item', vis) : [];
-  var curN = (bell && bell.state === 'now') ? bell.n
-           : (bell && bell.state === 'break' && bell.next) ? bell.next.n : null;
+  // Номер пары для подсветки: идущая / следующая / последняя завершившаяся
+  var curN = null, mode = '';
+  if (bell) {
+    if (bell.state === 'now') { curN = bell.n; mode = 'now'; }
+    else if (bell.state === 'break' && bell.next) { curN = bell.next.n; mode = 'next'; }
+    else if (bell.state === 'done') { curN = bell.n; mode = 'done'; }
+  }
   items.forEach(function(el){
     var dow = DOW[el.getAttribute('data-wday')];
     var n = +el.getAttribute('data-n');
-    var w = (dow === undefined) ? null : pairWindow(dow, n);
     var isNow = (dow === todayIdx && curN !== null && n === curN);
-    el.classList.toggle('now', isNow);
-    el.classList.toggle('now-today', isNow);
+    el.classList.toggle('now', isNow && mode !== 'done');
+    el.classList.toggle('now-today', isNow && mode === 'now');
+    el.classList.toggle('next-pair', isNow && mode === 'next');
+    el.classList.toggle('last-pair', isNow && mode === 'done');
   });
 
   var days = vis ? $$('.card-day', vis) : [];
@@ -556,7 +576,7 @@ function paint(){
       var h2 = Math.floor(bell.left/60), m2 = bell.left%60;
       left.textContent = 'через ' + (h2 ? h2+' ч ' : '') + m2 + ' мин';
     } else {
-      pair.textContent = 'Занятия закончились';
+      pair.textContent = 'Пара ' + bell.n + ' закончилась';
       time.textContent = bell.start + '–' + bell.end;
       left.textContent = '';
     }
@@ -565,10 +585,14 @@ function paint(){
     if (CUR && CUR !== 'panel-default') {
       var sec = document.getElementById(CUR);
       if (sec) {
+        // ищем пару сегодняшнего дня недели с нужным номером
         var hit = null, fallback = null;
-        $$('.tl-item.now', sec).forEach(function(el){
+        var pool = $$('.tl-item.now, .tl-item.next-pair, .tl-item.last-pair', sec);
+        if (!pool.length) pool = $$('.tl-item', sec);
+        pool.forEach(function(el){
           if (!fallback) fallback = el;
-          if (!hit && DOW[el.getAttribute('data-wday')] === todayIdx) hit = el;
+          if (!hit && DOW[el.getAttribute('data-wday')] === todayIdx &&
+              (curN === null || +el.getAttribute('data-n') === curN)) hit = el;
         });
         if (!hit) hit = fallback;
         if (hit) {
@@ -578,11 +602,13 @@ function paint(){
             return (lbl ? lbl.textContent + ' ' : '') + val;
           }).join(' · ');
           var hitDate = hit.getAttribute('data-date');
-          info = '<b>' + hit.getAttribute('data-n') + '. пара (' +
-                 $('.tl-time', hit).textContent + ')</b> — ' + (t?t.textContent:'') +
-                 (m ? ' · ' + m : '');
+          info = '<b>' + escJs(hit.getAttribute('data-n')) + '. пара (' +
+                 escJs($('.tl-time', hit).textContent) + ')</b> — ' +
+                 escJs(t ? t.textContent : '') +
+                 (m ? ' · ' + escJs(m) : '');
           if (hitDate && hitDate !== now.day) {
-            info += ' <span class="note">' + hit.getAttribute('data-wday') + ', ' + hitDate + '</span>';
+            info += ' <span class="note">' + escJs(hit.getAttribute('data-wday')) +
+                    ', ' + escJs(hitDate) + '</span>';
           }
         } else {
           info = 'В выбранном расписании сейчас пар нет';
@@ -604,6 +630,7 @@ function paint(){
       var cls;
       if (now.mins >= s && now.mins < e) cls = 'seg now';
       else if (bell.state === 'break' && bell.next && (i+1) === bell.next.n) cls = 'seg next';
+      else if (bell.state === 'done' && (i+1) === bell.n) cls = 'seg last';
       else if (now.mins >= e) cls = 'seg done';
       else cls = 'seg';
       html += '<div class="' + cls + '">' + (i+1) + '</div>';
@@ -624,7 +651,8 @@ function renderList(kind){
   var html = '';
   items.forEach(function(i){
     html += '<div class="li" data-target="' + i.s + '" data-kind="' + kind +
-            '" data-name="' + i.n + '"><span class="lead">' + (i.n.split(' ')[0].charAt(0) +
+            '" data-name="' + i.n + '"><span class="lead">' +
+            escJs(i.n.split(' ')[0].charAt(0) +
             (i.n.split(' ')[1] ? i.n.split(' ')[1].charAt(0) : '')) + '</span>' +
             '<span class="txt">' + i.n + '</span>' +
             '<span class="cnt">' + i.c + '</span></div>';
@@ -742,28 +770,38 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 
   document.addEventListener('click', function(e){
-    var btn = e.target.closest ? e.target.closest('.stab') : null;
-    if (!btn) return;
-
-    if (btn.getAttribute('data-toggle') === 'free') {
-      var hide = btn.getAttribute('data-state') !== 'hidden';
-      btn.setAttribute('data-state', hide ? 'hidden' : 'shown');
-      btn.textContent = hide ? 'Показать окна' : 'Скрыть окна';
-      var scope = btn.closest('section');
-      $$('.tl-free', scope).forEach(function(el){
-        el.hidden = hide;
-        var prev = el.previousElementSibling;
-        if (prev && prev.classList.contains('tl-break')) prev.hidden = hide;
-      });
+    // 1) Кнопка «Скрыть/Показать окна» — отдельный класс .toggle-free (НЕ .stab)
+    var tgl = e.target.closest ? e.target.closest('.toggle-free') : null;
+    if (tgl) {
+      var hide = tgl.getAttribute('data-state') !== 'hidden';
+      tgl.setAttribute('data-state', hide ? 'hidden' : 'shown');
+      tgl.textContent = hide ? 'Показать окна' : 'Скрыть окна';
+      // scope — секция преподавателя/группы/аудитории
+      var scope = tgl.closest('.ent') || tgl.closest('section');
+      if (scope) {
+        $$('.tl-free', scope).forEach(function(el){
+          el.hidden = hide;
+          var prev = el.previousElementSibling;
+          if (prev && prev.classList.contains('tl-break')) prev.hidden = hide;
+        });
+      }
       return;
     }
 
-    var wrap = btn.parentNode;
-    $$('.stab', wrap).forEach(function(b){ b.classList.toggle('active', b === btn); });
+    // 2) Переключатель «Расписание / Итоги» — .stab с data-view
+    var btn = e.target.closest ? e.target.closest('.stab[data-view]') : null;
+    if (!btn) return;
     var view = btn.getAttribute('data-view');
-    $$('.pane', wrap.parentNode).forEach(function(p){
+    // секция-владелец панелей
+    var sec = btn.closest('.ent') || btn.closest('section');
+    if (!sec) return;
+    $$('.stab[data-view]', sec).forEach(function(b){
+      b.classList.toggle('active', b === btn);
+    });
+    $$('.pane', sec).forEach(function(p){
       p.hidden = p.getAttribute('data-pane') !== view;
     });
+    paint();
   });
 
   var dt = new Date();
