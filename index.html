@@ -279,6 +279,21 @@ function mskNow(){
 
 function toMin(s){ var p = s.split(':'); return (+p[0])*60 + (+p[1]); }
 
+/* Окно пары N для дня недели: в понедельник ��вои звонки, вт-сб — основные */
+var WIN = {mon:{}, main:{}};
+(function(){
+  ['Понедельник','Вт-Сб'].forEach(function(k){
+    var key = (k === 'Понедельник') ? 'mon' : 'main';
+    BELLS[k].forEach(function(b, i){ WIN[key][i+1] = [toMin(b[0]), toMin(b[1])]; });
+  });
+})();
+
+/* Текущий номер пары и её окно для конкретного дня недели */
+function pairWindow(dow, n){
+  var key = (dow === 1) ? 'mon' : 'main';
+  return WIN[key][n] || null;
+}
+
 /* ---------- текущая пара по звонкам ---------- */
 function currentBell(now){
   var mon = (now.wday === 1);
@@ -298,19 +313,24 @@ function currentBell(now){
 function paint(){
   var now = mskNow();
   var bell = currentBell(now);
-  var todayDow = DOW['Пн'] !== undefined ? null : null;
   // индекс дня недели сегодня: Пн=1..Вс=0
   var todayIdx = now.wday;
   var isMondayToday = (todayIdx === 1);
 
-  // пары в таймлайнах — по времени суток (независимо от дня недели)
-  $$('.tl-item').forEach(function(el){
-    var s = +el.getAttribute('data-s'), e = +el.getAttribute('data-e');
-    el.classList.toggle('now', (now.mins >= s && now.mins < e));
+  // пары: номер пары + окно ЗВОНОКОВ для дня этой пары (Пн — свои, Вт-Сб — основные)
+  // красим только в видимой секции — не 2173 элемента, а десятки
+  var vis = $('.ent:not([hidden])');
+  var items = vis ? $$('.tl-item', vis) : [];
+  items.forEach(function(el){
+    var dow = DOW[el.getAttribute('data-wday')];
+    var n = +el.getAttribute('data-n');
+    var w = (dow === undefined) ? null : pairWindow(dow, n);
+    el.classList.toggle('now', !!w && now.mins >= w[0] && now.mins < w[1]);
   });
 
   // заголовок дня: помечаем сегодняшний день недели
-  $$('.day').forEach(function(sec){
+  var days = vis ? $$('.day', vis) : [];
+  days.forEach(function(sec){
     var head = $('.dayhead .dow', sec);
     if (!head) return;
     var dw = head.textContent.trim();
@@ -318,12 +338,12 @@ function paint(){
     head.classList.toggle('today', (idx !== undefined && idx === todayIdx));
   });
 
-  // звонки — подсвечиваем только в строке, соответствующей сегодняшнему дню
+  // звонки — в строке сегодняшнего дня подсвечиваем текущую пару
   $$('.bell').forEach(function(el){
-    var s = +el.getAttribute('data-s'), e = +el.getAttribute('data-e');
     var isMonRow = (el.getAttribute('data-row') === 'mon');
     var applies = (isMonRow === isMondayToday);
-    el.classList.toggle('now', applies && now.mins >= s && now.mins < e);
+    var n = +el.getAttribute('data-n');
+    el.classList.toggle('now', applies && !!bell && n === bell.n);
   });
 
   // блок «Сейчас»
@@ -342,11 +362,16 @@ function paint(){
     if (CUR && CUR !== 'panel-default') {
       var sec = document.getElementById(CUR);
       if (sec) {
-        var hit = null;
-        $$('.tl-item.now', sec).forEach(function(el){ if (!hit) hit = el; });
+        var hit = null, fallback = null;
+        $$('.tl-item.now', sec).forEach(function(el){
+          if (!fallback) fallback = el;
+          if (!hit && DOW[el.getAttribute('data-wday')] === todayIdx) hit = el;
+        });
+        if (!hit) hit = fallback;
         if (hit) {
           var t = $('.tl-title', hit), m = $$('.tl-meta .mt', hit).map(function(x){return x.textContent;}).join(' · ');
-          info = '<b>' + hit.getAttribute('data-n') + '. пара</b> — ' + (t?t.textContent:'') +
+          info = '<b>' + hit.getAttribute('data-n') + '. пара (' +
+                 $('.tl-time', hit).textContent + ')</b> — ' + (t?t.textContent:'') +
                  (m ? ' · ' + m : '');
         } else {
           info = 'В выбранном расписании сейчас пар нет';
