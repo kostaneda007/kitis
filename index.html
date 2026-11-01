@@ -444,7 +444,7 @@ footer{max-width:1600px;margin:0 auto;padding:32px 24px;text-align:center;
 
 <footer>
   Расписание КИТИС &middot; http://94.72.18.202:8083/<br>
-  Обновлено: 2026-10-31T08:28:17Z &middot; время колледжа MSK (UTC+3)<br>Вакансии (часы без преподавателя): план 911.0 ч, факт 174.0 ч
+  Обновлено: 2026-10-31T08:28:17Z &middot; время колледжа Kaliningrad (UTC+2)<br>Вакансии (часы без преподавателя): план 911.0 ч, факт 174.0 ч
 </footer>
 
 <script>
@@ -463,11 +463,11 @@ function escJs(s){
 function $(s, r){ return (r||document).querySelector(s); }
 function $$(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
 
-/* ---------- время колледжа (MSK, UTC+3) ---------- */
+/* ---------- время колледжа (Kaliningrad, UTC+2) ---------- */
 function mskNow(){
   try {
     var parts = new Intl.DateTimeFormat('en-GB', {
-      timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit',
+      timeZone:'Europe/Kaliningrad', hour:'2-digit', minute:'2-digit',
       day:'2-digit', month:'2-digit', year:'numeric', hour12:false
     }).formatToParts(new Date());
     var o = {};
