@@ -3,7 +3,9 @@ from pathlib import Path
 import re
 
 def migrate(s):
-    if 'kitis-global-v8' in s:return s
+    if 'kitis-global-v8' in s:
+        from single_scale import migrate as single
+        return single(s)
     s,n=re.subn(r'<div class="day-overview">.*?<div class="bell-guide".*?</div></div></div>', '', s, flags=re.S)
     if not n:raise ValueError('No old overviews removed')
     top='<section class="day-overview" id="globalOverview" aria-label="Сегодня: все пары и перемены"><h2>Обзор дня · сегодня</h2><p class="day-status"></p><div class="day-scale"></div><div class="day-scale-labels"></div><div class="day-legend"><span class="legend-lesson">Пары</span><span class="legend-break">Перемены</span><span class="legend-now">Сейчас</span></div><div class="bell-guide"></div></section>'
@@ -57,6 +59,7 @@ function paintDayOverview(day,arr,dow,now){
 #liveTrack{display:none}
 @media(max-width:600px){#globalOverview{padding:16px}#globalOverview .bell-guide{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>''')
-    return s
+    from single_scale import migrate as single
+    return single(s)
 if __name__=='__main__':
     p=Path(__file__).with_name('index.html');p.write_text(migrate(p.read_text()))
