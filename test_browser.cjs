@@ -1,0 +1,30 @@
+const {chromium}=require(process.env.HOME+'/.hermes/cache/scratch/kitis-browser/node_modules/playwright');
+const assert=require('node:assert/strict');
+const fs=require('fs');
+(async()=>{
+const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+const out=process.env.HOME+'/.hermes/cache/scratch/kitis-timeline';fs.mkdirSync(out,{recursive:true});
+const page=await browser.newPage({viewport:{width:1280,height:900}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto('file:///tmp/kitis_clone/index.html');
+await page.evaluate(()=>{mskNow=()=>({mins:650,wday:2,day:'03.11.2026',hour:10,minute:50});select('t-44');paint();});
+const inventory=await page.evaluate(()=>({entities:document.querySelectorAll('.ent').length,days:document.querySelectorAll('.card-day').length,lessons:document.querySelectorAll('.tl-item:not(.tl-free)').length,free:document.querySelectorAll('.tl-free').length,overviews:document.querySelectorAll('.day-overview').length,allSeven:[...document.querySelectorAll('.ent:not(#panel-default)')].every(e=>e.querySelectorAll('.card-day').length===7)}));assert(inventory.allSeven);
+const cursor=()=>page.$eval('#t-44 .card-day[data-wday="Вт"] .day-cursor',e=>parseFloat(e.style.left));const first=await cursor();
+await page.evaluate(()=>{mskNow=()=>({mins:670,wday:2,day:'03.11.2026',hour:11,minute:10});paint();});assert(await cursor()>first);
+assert.match(await page.locator('#t-44 .card-day[data-wday="Вт"] .day-status').innerText(),/Сейчас: пара 2/);
+await page.screenshot({path:out+'/desktop-1280x900.png'});
+await page.evaluate(()=>{mskNow=()=>({mins:710,wday:2,day:'03.11.2026',hour:11,minute:50});paint();});
+assert.match(await page.locator('#t-44 .card-day[data-wday="Вт"] .day-status').innerText(),/Сейчас: перемена · 11:40–12:10 · 30 мин/);
+assert.equal(await page.locator('#t-44 .tl-break.now').count(),1);assert.equal(await page.locator('#t-44 .tl-item.now').count(),0);
+await page.evaluate(()=>document.querySelector('#t-44 .card-day[data-wday="Вт"]').scrollIntoView());await page.screenshot({path:out+'/desktop-break-1280x900.png'});
+for(const tab of ['t','g','r']){await page.evaluate(t=>switchTab(t),tab);const bounds=await page.locator('#tlist .li').evaluateAll(es=>es.map(e=>{let r=e.getBoundingClientRect();return r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth}));assert(bounds.every(Boolean));}
+await page.screenshot({path:out+'/desktop-chooser-1280x900.png'});
+await page.evaluate(()=>switchTab('t'));await page.locator('#search').fill('Морылёв');assert.equal(await page.locator('#tlist .li:visible').count(),1);await page.locator('#tlist .li:visible').click();
+await page.locator('#t-44 .stab[data-view="res"]').click();assert(await page.locator('#t-44 .pane[data-pane="res"]').isVisible());await page.locator('#t-44 .stab[data-view="sch"]').click();
+await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{closeSide();window.scrollTo(0,0)});await page.screenshot({path:out+'/mobile-390x844.png'});
+assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+await page.evaluate(()=>document.querySelector('#t-44 .card-day[data-wday="Вт"]').scrollIntoView());await page.screenshot({path:out+'/mobile-break-390x844.png'});
+await page.evaluate(()=>switchTab('g'));assert(await page.locator('#side').evaluate(e=>e.classList.contains('open')));await page.locator('#tlist .li').first().click();assert(await page.locator('#side').evaluate(e=>!e.classList.contains('open')));
+await page.evaluate(()=>{mskNow=()=>({mins:600,wday:0,day:'08.11.2026',hour:10,minute:0});paint();});assert.equal(await page.locator('.day-cursor:visible').count(),0);assert.equal(await page.locator('#livePair').innerText(),'Выходной');
+assert.deepEqual(errors,[]);console.log(JSON.stringify({inventory,errors,screenshots:out},null,2));await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

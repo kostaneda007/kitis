@@ -4,7 +4,8 @@ import re
 
 def redesign(s):
     if 'kitis-timeline-v5' in s:
-        return s
+        from overview_timeline import enhance
+        return enhance(s)
     css='''
 /* kitis-timeline-v5: readable event cards, one event-relative live progress */
 @media(min-width:1025px){body.choosing footer{display:none}}
@@ -59,7 +60,8 @@ def redesign(s):
     s=s.replace(".split('–')[0]+' · '+gap+' мин';",".split('–')[0];")
     # Make every break readable before JS too.
     s=re.sub(r'(<span class="tl-breaklabel">)[^<]*(</span><span class="tl-breaktime">)([^<]*?) · (\d+) мин</span>',lambda m:m[1]+'Перемена · '+m[4]+' мин'+m[2]+m[3]+'</span>',s)
-    return s
+    from overview_timeline import enhance
+    return enhance(s)
 
 if __name__=='__main__':
     p=Path(__file__).with_name('index.html');p.write_text(redesign(p.read_text()))
