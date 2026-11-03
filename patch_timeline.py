@@ -123,5 +123,8 @@ function paintTimeAxes(now){
 '''
 s=s.replace('/* ---------- init ---------- */',extra+'\n/* ---------- init ---------- */')
 assert re.findall(r'<li class="tl-item".*?</li>',s)==original_lessons
+# Keep presentation migration coupled to this patch, without rebuilding source data.
+from redesign_timeline import redesign
+s=redesign(s)
 p.write_text(s)
 print('Preserved',len(original_lessons),'occupied lessons; enhanced',len(s),'characters')
