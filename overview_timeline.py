@@ -7,7 +7,9 @@ def minute(t):
     h,m=map(int,t.split(':'));return h*60+m
 
 def enhance(s):
-    if 'kitis-overview-v6' in s:return s
+    if 'kitis-overview-v6' in s:
+        from readable_overview import improve
+        return improve(s)
     def day(m):
         block=m[0]
         dow=re.search(r'data-wday="([^"]+)"',block)[1]
@@ -82,7 +84,8 @@ def enhance(s):
     needle="var arr=dow===1?BELLS['Понедельник']:BELLS['Вт-Сб'];"
     s=s.replace(needle,needle+'\n    paintDayOverview(day,arr,dow,now);')
     s=s.replace("el.classList.toggle('now', isNow && mode !== 'done');","el.classList.toggle('now', isNow && mode === 'now');")
-    return s
+    from readable_overview import improve
+    return improve(s)
 
 if __name__=='__main__':
     p=Path(__file__).with_name('index.html');p.write_text(enhance(p.read_text()))
