@@ -6,7 +6,8 @@ from overview_timeline import MON, MAIN, minute
 
 def improve(s):
     if 'kitis-readable-v7' in s:
-        return s
+        from global_overview import migrate
+        return migrate(s)
     def overview(m):
         block=m[0]
         times=re.findall(r'aria-label="Пара (\d+) · (\d\d:\d\d)–(\d\d:\d\d)"',block)
@@ -51,7 +52,8 @@ def improve(s):
 @media(max-width:1024px){.bell-guide{grid-template-columns:repeat(4,minmax(0,1fr))}.lesson-card,.break-card{grid-row:auto}}
 @media(max-width:600px){.bell-guide{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.bell-card{padding:8px 10px}.bell-card time{font-size:13px}.bell-card small{font-size:12px}.subtabs{gap:8px}.subtabs .stab[data-view]{padding:10px 12px}}
 '''
-    return s.replace('</style>',css+'\n</style>')
+    from global_overview import migrate
+    return migrate(s.replace('</style>',css+'\n</style>'))
 
 if __name__=='__main__':
     p=Path(__file__).with_name('index.html')
