@@ -5,12 +5,14 @@ from pathlib import Path
 
 def migrate(s):
     if 'kitis-single-scale-v9' in s:
-        return s
+        from sticky_overview import migrate as sticky
+        return sticky(s)
     a=s.index('<section class="day-overview" id="globalOverview"'); b=s.index('<section class="live" id="liveCard">',a)
     s=s[:a]+'''<section class="day-overview" id="globalOverview" aria-label="Обзор дня: пары и перемены"><h2>Обзор дня · сегодня</h2><p class="day-status"></p><div class="day-scale" role="group" aria-label="Пары и перемены по времени"></div><div class="day-scale-labels" aria-hidden="true"></div><div class="day-legend"><span class="legend-lesson">Пары · номера на шкале</span><span class="legend-break">Перемены · узкие интервалы</span><span class="legend-now">Сейчас · линия и подсветка</span></div><div class="scale-detail"><p id="intervalDetail" aria-live="polite"></p><div class="scale-controls"><label for="intervalSelect">Интервал</label><select id="intervalSelect" aria-describedby="intervalDetail"><option>Сейчас</option></select><button type="button" id="scaleReset">К текущему</button></div></div></section>'''+s[b:]
     a=s.index('function paintGlobalOverview(');b=s.index('function paintDayOverview(',a)
     s=s[:a]+JS+'\n'+s[b:]
-    return s.replace('</style>',CSS+'\n</style>')
+    from sticky_overview import migrate as sticky
+    return sticky(s.replace('</style>',CSS+'\n</style>'))
 
 JS=r'''function paintGlobalOverview(now){
   var host=$('#globalOverview'),arr=now.wday===1?BELLS['Понедельник']:BELLS['Вт-Сб'];
